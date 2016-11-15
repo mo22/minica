@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+
+ROOT="$( ( cd "$( dirname "$0" )" && pwd ) )"
+
+CN="$1"
+
+openssl ca \
+    -config "$ROOT/openssl.cnf" \
+    -extensions server_cert -days 375 -notext -md sha256 \
+    -in "$ROOT/csr/$CN.csr.pem" \
+    -out "$ROOT/certs/$CN.cert.pem"
+
+

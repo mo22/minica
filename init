@@ -4,10 +4,12 @@ set -euo pipefail
 ROOT="$( ( cd "$( dirname "$0" )" && pwd ) )"
 
 [ -d "$ROOT/certs" ] || mkdir "$ROOT/certs"
+[ -d "$ROOT/newcerts" ] || mkdir "$ROOT/newcerts"
+[ -d "$ROOT/csr" ] || mkdir "$ROOT/csr"
 [ -d "$ROOT/private" ] || mkdir "$ROOT/private"
 chmod 700 "$ROOT/private"
-
 [ -e "$ROOT/serial" ] || echo 1000 > "$ROOT/serial"
+[ -e "$ROOT/index.txt" ] || touch "$ROOT/index.txt"
 
 # https://jamielinux.com/docs/openssl-certificate-authority/create-the-root-pair.html
 
@@ -124,11 +126,14 @@ fi
 if ! [ -e "$ROOT/certs/ca.cert.pem" ]; then 
     openssl req \
         -config "$ROOT/openssl.cnf" \
-        -subj '/C=DE/ST=Germany/L=Germany/CN=ca' \
+        -subj "/C=DE/ST=Germany/L=Germany/CN=ca" \
         -key "$ROOT/private/ca.key.pem" \
         -new -x509 -days 7300 -sha256 -extensions v3_ca \
         -out "$ROOT/certs/ca.cert.pem"
 fi
+
+# openssl x509 -noout -text -in "$ROOT/certs/ca.cert.pem"
+
 
 
 
