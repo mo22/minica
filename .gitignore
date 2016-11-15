@@ -5,4 +5,7 @@
 /serial
 /openssl.cnf
 /index.txt
+/index.txt.attr
+/index.txt.old
+/serial.old
 

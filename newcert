@@ -9,7 +9,7 @@ openssl genrsa -out "$ROOT/private/$CN.key.pem" 2048
 
 openssl req \
     -config "$ROOT/openssl.cnf" \
-    -subj "/C=DE/ST=Germany/L=Germany/CN=$CN" \
+    -subj "/C=DE/ST=Germany/L=Germany/O=private/CN=$CN" \
     -key "$ROOT/private/$CN.key.pem" \
     -new -sha256 \
     -out "$ROOT/csr/$CN.csr.pem"

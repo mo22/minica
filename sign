@@ -8,6 +8,7 @@ CN="$1"
 openssl ca \
     -config "$ROOT/openssl.cnf" \
     -extensions server_cert -days 375 -notext -md sha256 \
+    -batch \
     -in "$ROOT/csr/$CN.csr.pem" \
     -out "$ROOT/certs/$CN.cert.pem"
 

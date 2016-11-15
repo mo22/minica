@@ -126,7 +126,7 @@ fi
 if ! [ -e "$ROOT/certs/ca.cert.pem" ]; then 
     openssl req \
         -config "$ROOT/openssl.cnf" \
-        -subj "/C=DE/ST=Germany/L=Germany/CN=ca" \
+        -subj "/C=DE/ST=Germany/L=Germany/O=private/CN=ca" \
         -key "$ROOT/private/ca.key.pem" \
         -new -x509 -days 7300 -sha256 -extensions v3_ca \
         -out "$ROOT/certs/ca.cert.pem"
