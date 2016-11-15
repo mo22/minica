@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$( ( cd "$( dirname "$0" )" && pwd ) )"
-rm -rf "$ROOT/private" "$ROOT/certs" "$ROOT/newcerts" "$ROOT/csr" "$ROOT/private" "$ROOT/serial" "$ROOT/index.txt"
+rm -rf "$ROOT"/{private,certs,newcerts,csr,private,serial,index.txt.attr,index.txt,index.txt.old,serial.old,openssl.cnf}
 
 
