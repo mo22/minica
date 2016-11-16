@@ -186,6 +186,12 @@ class MiniCA:
             stdin_data=pem
         )
 
+    def extract_csr(self, pem):
+        return self.exec_openssl(
+            'req',
+            stdin_data=pem
+        )
+
     def sign(self, csr, store=True):
         """
         sign csr (in pem format) and return certificate (in pem format)
@@ -224,13 +230,17 @@ class MiniCA:
             '-extensions', 'usr_cert',
             '-newkey', 'rsa:2048', '-nodes'
         )
+        csr = self.extract_csr(csr_and_key)
         key = self.extract_key(csr_and_key)
-        cert = self.sign(csr_and_key)
+        print 'CSR', csr
+        print 'KEY', key
+        cert = self.sign(csr, store=store)
+        print "CERT", cert
         if store:
             with open(self.get_path('all', commonName+'.key.pem'), 'w') as fp:
                 fp.write(key)
-        print 'key', repr(key)
-        print 'cert', repr(cert)
+            with open(self.get_path('all', commonName+'.csr.pem'), 'w') as fp:
+                fp.write(csr)
         return cert + key
 
     # --
@@ -318,7 +328,7 @@ if __name__ == '__main__':
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.WARNING)
 
     root = os.path.abspath(os.path.join(__file__, '..', 'data'))
     if 'MINICA_ROOT' in os.environ:
