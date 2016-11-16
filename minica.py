@@ -134,13 +134,14 @@ class MiniCA:
                 '-out', self.get_path('certs', 'ca.cert.pem')
             )
 
-    def get_csr_subject(self, csr):
+    def get_csr_info(self, csr):
         res = self.exec_openssl(
-            'req', '-subject', '-noout', '-verify', stdin_data=csr
+            'req', '-subject', '-noout', '-text', '-verify', stdin_data=csr
         )
-        if not res.startswith('subject='):
+        m = re.search('subject=(.*)', res)
+        if not m:
             raise MiniCA.Error('cannot parse response')
-        return self.decode_subject(res[len('subject='):].strip())
+        return self.decode_subject(m.group(1))
 
     def sign(self, csr):
         # max_days?
@@ -174,7 +175,7 @@ class MiniCA:
             '-out', self.get_path('csr', commonName+'.csr.pem')
         )
 
-        tmp = self.get_csr_subject(self.get_csr(commonName))
+        tmp = self.get_csr_info(self.get_csr(commonName))
         print tmp
         # self.sign(self.get_csr(commonName))
         # -multivalue-rdn ?
