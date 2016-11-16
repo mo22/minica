@@ -218,55 +218,42 @@ class MiniCA:
 if __name__ == '__main__':
     import os
     import sys
-    # get arguments, split --something= to two elements
-    args = sys.argv[1:]
-    args = [ i.split('=', 1) if i.startswith('--') and '=' in i else [i] for i in args ]
-    args = [ i for j in args for i in j ]
+    import argparse
+
+    def do_cacert(args):
+        sys.stdout.write(ca.get_ca_certificate())
+
+    def do_cert(args):
+        print args
+        sys.stdout.write(ca.get_certificate(args.commonName))
+
+    parser = argparse.ArgumentParser(description='MiniCA')
+    parser.add_argument('--root', help='root directory for CA')
+    parser.add_argument('--verbose', action='store_true', default=False, help='verbose mode')
+    subparsers = parser.add_subparsers(help='sub-command help')
+
+    parser_cacert = subparsers.add_parser('cacert', help='write ca cert to stdout in pem format')
+    parser_cacert.set_defaults(func=do_cacert)
+
+    parser_cert = subparsers.add_parser('cert', help='write certificate to stdout in pem format')
+    parser_cert.add_argument('commonName', help='common name of certificate')
+    parser_cert.set_defaults(func=do_cert)
+
+    args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
 
     root = os.path.abspath(os.path.join(__file__, '..', 'data'))
     if 'MINICA_ROOT' in os.environ:
         root = os.environ['MINICA_ROOT']
-    if '--root' in args:
-        i = args.index('--root')
-        root = args[i+1]
-        args.pop(i)
-        args.pop(i)
-
-    if '--verbose' in args:
-        i = args.index('--verbose')
-        args.pop(i)
-        logging.basicConfig(level=logging.DEBUG)
-
+    if args.root:
+        root = args.root
     ca = MiniCA(
-        root=os.path.abspath(os.path.join(__file__, '..', 'data'))
-        # location/etc. subj?
+        root=root
     )
 
-    if args == ['cacert']:
-        sys.stdout.write(ca.get_ca_certificate())
-
-    elif args[0:1] == ['cert']:
-        sys.stdout.write(ca.get_certificate(args[1]))
-
-    sys.exit(0)
-
-    import argparse
-    parser = argparse.ArgumentParser()
-    # parser.add_argument()
-
-    # ./minica.py sign [path-to-csr] --out=[path-to-crt]
-    # ./minica.py create [commonName] --out=[path-to-crt] --keyout=... --certout=...
-    # ./minica.py cacert
-    # ./minica.py cert [commonName]
-    # ./minica.py key [commonName]
-
-
-    ca.create_and_sign(
-        'client1.example.net',
-        subj={ 'organization': 'myorg' }
-    )
-
+    args.func(args)
 
 
