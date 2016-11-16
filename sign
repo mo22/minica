@@ -5,9 +5,10 @@ ROOT="$( ( cd "$( dirname "$0" )" && pwd ) )"
 
 CN="$1"
 
+# -extensions usr_cert
 openssl ca \
     -config "$ROOT/openssl.cnf" \
-    -extensions server_cert -days 375 -notext -md sha256 \
+    -extensions usr_cert -days 375 -notext -md sha256 \
     -batch \
     -in "$ROOT/csr/$CN.csr.pem" \
     -out "$ROOT/certs/$CN.cert.pem"
