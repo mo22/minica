@@ -184,11 +184,17 @@ class MiniCA:
         pass
 
     def get_csr(self, commonName):
-        with open(self.get_path('csr', commonName + '.csr.pem'), 'r') as fp:
+        p = self.get_path('csr', commonName + '.csr.pem')
+        if not os.path.isfile(p):
+            raise MiniCA.Error('csr for %r does not exist' % (commonName, ))
+        with open(p, 'r') as fp:
             return fp.read()
 
     def get_certificate(self, commonName):
-        with open(self.get_path('certs', commonName + '.cert.pem'), 'r') as fp:
+        p = self.get_path('certs', commonName + '.cert.pem')
+        if not os.path.isfile(p):
+            raise MiniCA.Error('certificate for %r does not exist' % (commonName, ))
+        with open(p, 'r') as fp:
             return fp.read()
 
     def get_key(self, commonName):
@@ -198,7 +204,10 @@ class MiniCA:
         :returns: the key in PEM format
         :rtype: str
         """
-        with open(self.get_path('private', commonName + '.key.pem'), 'r') as fp:
+        p = self.get_path('private', commonName + '.key.pem')
+        if not os.path.isfile(p):
+            raise MiniCA.Error('key for %r does not exist' % (commonName, ))
+        with open(p, 'r') as fp:
             return fp.read()
 
     def get_key_and_certificate(self, commonName):
@@ -224,8 +233,21 @@ if __name__ == '__main__':
         sys.stdout.write(ca.get_ca_certificate())
 
     def do_cert(args):
-        print args
         sys.stdout.write(ca.get_certificate(args.commonName))
+
+    def do_key(args):
+        sys.stdout.write(ca.get_key(args.commonName))
+
+    def do_certkey(args):
+        sys.stdout.write(ca.get_certificate(args.commonName))
+        sys.stdout.write(ca.get_key(args.commonName))
+
+    def do_sign(args):
+        pass
+
+    def do_create(args):
+        pass
+
 
     parser = argparse.ArgumentParser(description='MiniCA')
     parser.add_argument('--root', help='root directory for CA')
@@ -238,6 +260,19 @@ if __name__ == '__main__':
     parser_cert = subparsers.add_parser('cert', help='write certificate to stdout in pem format')
     parser_cert.add_argument('commonName', help='common name of certificate')
     parser_cert.set_defaults(func=do_cert)
+
+    parser_key = subparsers.add_parser('cert', help='write key to stdout in pem format')
+    parser_key.add_argument('commonName', help='common name of certificate')
+    parser_key.set_defaults(func=do_key)
+
+    parser_certkey = subparsers.add_parser('cert', help='write certificate and key to stdout in pem format')
+    parser_certkey.add_argument('commonName', help='common name of certificate')
+    parser_certkey.set_defaults(func=do_certkey)
+
+    parser_create = subparsers.add_parser('create', help='create csr and sign')
+    parser_create.add_argument('commonName', help='common name of certificate')
+    #
+    parser_create.set_defaults(func=do_certkey)
 
     args = parser.parse_args()
 
