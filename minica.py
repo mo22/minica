@@ -192,17 +192,15 @@ class MiniCA:
             stdin_data=pem
         )
 
-    def sign(self, csr, store=True):
+    def sign(self, csr, store=True, days=None, extensions=None):
         """
         sign csr (in pem format) and return certificate (in pem format)
         """
+        days = int(days or 365)
+        extensions = extensions or ['server_cert']
         self.logger.info('sign')
         info = self.get_csr_info(csr)
         self.logger.info('sign commonName=%r', info['commonName'])
-        # max_days?
-        # force_usage?
-        # '-extensions', 'usr_cert',
-        # '-days', '375',
         res = self.exec_openssl(
             'ca',
             '-notext',
@@ -210,6 +208,8 @@ class MiniCA:
             '-batch',
             '-in', '/dev/stdin',
             '-out', '/dev/stdout',
+            '-days', str(days),
+            '-extensions', ','.join(extensions),
             stdin_data=csr
         )
         if store:
@@ -226,7 +226,7 @@ class MiniCA:
             stdin_data=cert
         )
 
-    def create_and_sign(self, commonName, subj=None, store=True):
+    def create_and_sign(self, commonName, subj=None, store=True, days=None, extensions=None):
         self.logger.info('create_and_sign commonName=%r subj=%r', commonName, subj)
         self.validate_name(commonName)
         if subj is None:
@@ -236,13 +236,11 @@ class MiniCA:
             'req',
             '-utf8', '-batch', '-new', '-sha256',
             '-subj', self.encode_subject(subj),
-            '-days', '365',
-            '-extensions', 'usr_cert',
             '-newkey', 'rsa:2048', '-nodes'
         )
         csr = self.extract_csr(csr_and_key)
         key = self.extract_key(csr_and_key)
-        cert = self.sign(csr, store=store)
+        cert = self.sign(csr, store=store, days=days, extensions=extensions)
         if store:
             with open(self.get_path('all', commonName+'.key.pem'), 'w') as fp:
                 fp.write(key)
@@ -300,12 +298,9 @@ if __name__ == '__main__':
         sys.stdout.write(ca.get_key(args.commonName))
 
     def do_sign(args):
-        pass
-
-    def do_create(args):
-        ca.create_and_sign(args.commonName)
-        sys.stdout.write(ca.get_certificate(args.commonName))
-        sys.stdout.write(ca.get_key(args.commonName))
+        csr = sys.stdin.read()
+        res = ca.sign(csr, days=args.days, extensions=[args.usage])
+        sys.stdout.write(res)
 
     def do_revoke(args):
         if args.commonName:
@@ -313,6 +308,11 @@ if __name__ == '__main__':
         else:
             cert = sys.stdin.read()
         ca.revoke(cert)
+
+    def do_create(args):
+        ca.create_and_sign(args.commonName, days=args.days, extensions=[args.usage])
+        sys.stdout.write(ca.get_certificate(args.commonName))
+        sys.stdout.write(ca.get_key(args.commonName))
 
     parser = argparse.ArgumentParser(description='MiniCA')
     parser.add_argument('--root', help='root directory for CA')
@@ -337,14 +337,20 @@ if __name__ == '__main__':
     parser_certkey.add_argument('commonName', help='common name of certificate')
     parser_certkey.set_defaults(func=do_certkey)
 
-    parser_create = subparsers.add_parser('create', help='create csr and sign')
-    parser_create.add_argument('commonName', help='common name of certificate')
-    #
-    parser_create.set_defaults(func=do_create)
+    parser_sign = subparsers.add_parser('sign', help='sign a csr')
+    parser_sign.add_argument('--days', default='365', help='days of validity')
+    parser_sign.add_argument('--usage', default='server_cert', help='usage, server_cert or usr_cert')
+    parser_sign.set_defaults(func=do_sign)
 
     parser_revoke = subparsers.add_parser('revoke', help='revoke a certificate')
     parser_revoke.add_argument('commonName', nargs='?', help='common name of certificate, otherwise stdin is used')
     parser_revoke.set_defaults(func=do_revoke)
+
+    parser_create = subparsers.add_parser('create', help='create csr and sign')
+    parser_create.add_argument('commonName', help='common name of certificate')
+    parser_create.add_argument('--days', default='365', help='days of validity')
+    parser_create.add_argument('--usage', default='srv', help='usage, srv or usr')
+    parser_create.set_defaults(func=do_create)
 
     args = parser.parse_args()
 
