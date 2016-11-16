@@ -217,9 +217,28 @@ class MiniCA:
 
 if __name__ == '__main__':
     import sys
+    args = sys.argv[1:]
+    args = [ i.split('=', 1) if i.startswith('--') else [i] for i in args]
+    print args
+
+    # find --root ...
+    # find MINICA_ROOT env
+    # create ca
+
+
+    if sys.argv.get(1, '') == 'cacert':
+
+
     import argparse
     parser = argparse.ArgumentParser()
     # parser.add_argument()
+
+    # ./minica.py sign [path-to-csr] --out=[path-to-crt]
+    # ./minica.py create [commonName] --out=[path-to-crt] --keyout=... --certout=...
+    # ./minica.py cacert
+    # ./minica.py cert [commonName]
+    # ./minica.py key [commonName]
+
 
     logging.basicConfig(level=logging.DEBUG)
     ca = MiniCA(
