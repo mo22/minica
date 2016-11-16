@@ -216,18 +216,36 @@ class MiniCA:
 
 
 if __name__ == '__main__':
+    import os
     import sys
+    # get arguments, split --something= to two elements
     args = sys.argv[1:]
-    args = [ i.split('=', 1) if i.startswith('--') else [i] for i in args]
+    args = [ i.split('=', 1) if i.startswith('--') and '=' in i else [i] for i in args ]
+    args = [ i for j in args for i in j ]
+
+    logging.basicConfig(level=logging.INFO)
+
+    root = os.path.abspath(os.path.join(__file__, '..', 'data'))
+    if 'MINICA_ROOT' in os.environ:
+        root = os.environ['MINICA_ROOT']
+    if '--root' in args:
+        i = args.index('--root')
+        root = args[i+1]
+        args.pop(i)
+        args.pop(i)
+
+    if '--verbose' in args:
+        i = args.index('--verbose')
+        args.pop(i)
+        logging.basicConfig(level=logging.DEBUG)
+
+    ca = MiniCA(
+        root=os.path.abspath(os.path.join(__file__, '..', 'data'))
+        # location/etc. subj?
+    )
+
     print args
-
-    # find --root ...
-    # find MINICA_ROOT env
-    # create ca
-
-
-    if sys.argv.get(1, '') == 'cacert':
-
+    sys.exit(0)
 
     import argparse
     parser = argparse.ArgumentParser()
@@ -240,11 +258,6 @@ if __name__ == '__main__':
     # ./minica.py key [commonName]
 
 
-    logging.basicConfig(level=logging.DEBUG)
-    ca = MiniCA(
-        root=os.path.abspath(os.path.join(__file__, '..', 'data'))
-        # location/etc. subj?
-    )
     ca.create_and_sign(
         'client1.example.net',
         subj={ 'organization': 'myorg' }
