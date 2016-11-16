@@ -6,7 +6,7 @@ import re
 import logging
 
 __all__ = ['NanoCA']
-__version__ = '0.7'
+__version__ = '0.8'
 __author = 'Moritz Moeller <mm@mxs.de>'
 
 openssl_cnf_template = """
