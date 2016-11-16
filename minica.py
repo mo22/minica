@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 """
-[ ] docs: http://stackoverflow.com/questions/5334531/using-javadoc-for-python-documentation
+[ ] docs
 [ ] github
 [ ] cli
+
+http://stackoverflow.com/questions/5334531/using-javadoc-for-python-documentation
+https://jamielinux.com/docs/openssl-certificate-authority/
 
 """
 
@@ -27,6 +30,8 @@ class MiniCA:
         def __str__(self):
             return 'MiniCA.Error: ' + self.message
 
+    # --
+
     def __init__(self, root):
         """
         initialize the CA
@@ -36,6 +41,8 @@ class MiniCA:
         self.root = root
         self.logger = logging.getLogger('%s(%s)' % (self.__class__.__name__, root))
         self.initialize()
+
+    # --
 
     def exec_openssl(self, *args, **kwargs):
         stdin_data=kwargs.pop('stdin_data', None)
@@ -60,8 +67,12 @@ class MiniCA:
             raise MiniCA.Error("error calling openssl:\n" + stderr)
         return stdout
 
+    # --
+
     def get_path(self, *args):
         return os.path.join(self.root, *args)
+
+    # --
 
     def validate_name(self, value):
         if not re.match('^[a-zA-Z0-9\.\@]+$', value):
@@ -72,6 +83,8 @@ class MiniCA:
         if not re.match('^[^/]+$', value):
             raise MiniCA.Error('invalid string: %r' % (value, ))
         return value
+
+    # --
 
     subject_fields = {
         'C': 'country',
@@ -104,6 +117,8 @@ class MiniCA:
             res[self.subject_fields[k]] = v
         return res
 
+    # --
+
     def initialize(self):
         try:
             self.exec_openssl('version')
@@ -117,7 +132,15 @@ class MiniCA:
             if not os.path.isdir(d):
                 os.mkdir(d)
         os.chmod(self.get_path('private'), 0700)
-
+        if not os.path.isfile(self.get_path('index.txt')):
+            with open(self.get_path('index.txt'), 'w') as fp:
+                pass
+        if not os.path.isfile(self.get_path('serial')):
+            with open(self.get_path('serial'), 'w') as fp:
+                fp.write('1000')
+        if not os.path.isfile(self.get_path('private', '.rand')):
+            with open(self.get_path('private', '.rand'), 'w') as fp:
+                pass
         if not os.path.isfile(self.get_path('private', 'ca.key.pem')):
             self.exec_openssl(
                 'genrsa',
@@ -134,6 +157,8 @@ class MiniCA:
                 '-out', self.get_path('certs', 'ca.cert.pem')
             )
 
+    # --
+
     def get_csr_info(self, csr):
         res = self.exec_openssl(
             'req', '-subject', '-noout', '-text', '-verify', stdin_data=csr
@@ -144,17 +169,20 @@ class MiniCA:
         return self.decode_subject(m.group(1))
 
     def sign(self, csr):
+        info = self.get_csr_info(csr)
+        with open(self.get_path('csr', info['commonName']+'csr.pem'), 'w') as fp:
+            fp.write(csr)
         # max_days?
         # force_usage?
         self.exec_openssl(
             'ca',
             '-extensions', 'usr_cert',
-            '-days', 375,
-            'notext',
+            '-days', '375',
+            '-notext',
             '-md', 'sha256',
             '-batch',
-            '-in', ''
-            '-out', ''
+            '-in', self.get_path('csr', info['commonName']+'.csr.pem'),
+            '-out', self.get_path('certs', info['commonName']+'.cert.pem'),
         )
 
     def create_and_sign(self, commonName, subj=None):
@@ -174,14 +202,7 @@ class MiniCA:
             '-key', self.get_path('private', commonName+'.key.pem'),
             '-out', self.get_path('csr', commonName+'.csr.pem')
         )
-
-        tmp = self.get_csr_info(self.get_csr(commonName))
-        print tmp
-        # self.sign(self.get_csr(commonName))
-        # -multivalue-rdn ?
-        # -extensions?
-        # -reqexts?
-        pass
+        self.sign(self.get_csr(commonName))
 
     def get_csr(self, commonName):
         p = self.get_path('csr', commonName + '.csr.pem')
@@ -246,7 +267,9 @@ if __name__ == '__main__':
         pass
 
     def do_create(args):
-        pass
+        ca.create_and_sign(args.commonName)
+        sys.stdout.write(ca.get_certificate(args.commonName))
+        sys.stdout.write(ca.get_key(args.commonName))
 
 
     parser = argparse.ArgumentParser(description='MiniCA')
@@ -272,7 +295,7 @@ if __name__ == '__main__':
     parser_create = subparsers.add_parser('create', help='create csr and sign')
     parser_create.add_argument('commonName', help='common name of certificate')
     #
-    parser_create.set_defaults(func=do_certkey)
+    parser_create.set_defaults(func=do_create)
 
     args = parser.parse_args()
 
