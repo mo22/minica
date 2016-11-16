@@ -11,3 +11,8 @@ ca = minica.MiniCA(root='some_dir')
 ca.create('test.example.net')
 ca.get_key('test.example.net')
 ca.get_cert('test.example.net')
+
+
+#python setup.py register -r pypi
+#python setup.py sdist upload -r pypi
+
