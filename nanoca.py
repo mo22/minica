@@ -266,7 +266,7 @@ class NanoCA:
 
 
 
-if __name__ == '__main__':
+def main():
     import os
     import sys
     import argparse
@@ -364,4 +364,7 @@ if __name__ == '__main__':
 
     args.func(args)
 
+
+if __name__ == '__main__':
+    main()
 

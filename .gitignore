@@ -3,3 +3,5 @@
 /MANIFEST
 /build
 /*.egg-info
+*.pyc
+
