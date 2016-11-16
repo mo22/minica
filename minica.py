@@ -141,9 +141,6 @@ class MiniCA:
         if not os.path.isfile(self.get_path('crlnumber')):
             with open(self.get_path('crlnumber'), 'w') as fp:
                 fp.write('1000\n')
-        if not os.path.isfile(self.get_path('private', '.rand')):
-            with open(self.get_path('private', '.rand'), 'w') as fp:
-                pass
         if not os.path.isfile(self.get_path('private', 'ca.key.pem')):
             self.exec_openssl(
                 'genrsa',
@@ -223,10 +220,11 @@ class MiniCA:
     def get_crl(self):
         return self.exec_openssl('ca', '-gencrl')
 
-    def revoke(self):
-        pass
-    # -gencrl
-
+    def revoke(self, cert):
+        self.exec_openssl(
+            'ca', '-revoke', '/dev/stdin',
+            stdin_data=cert
+        )
 
     def create_and_sign(self, commonName, subj=None, store=True):
         self.logger.info('create_and_sign commonName=%r subj=%r', commonName, subj)
@@ -309,6 +307,12 @@ if __name__ == '__main__':
         sys.stdout.write(ca.get_certificate(args.commonName))
         sys.stdout.write(ca.get_key(args.commonName))
 
+    def do_revoke(args):
+        if args.commonName:
+            cert = ca.get_certificate(args.commonName)
+        else:
+            cert = sys.stdin.read()
+        ca.revoke(cert)
 
     parser = argparse.ArgumentParser(description='MiniCA')
     parser.add_argument('--root', help='root directory for CA')
@@ -337,6 +341,10 @@ if __name__ == '__main__':
     parser_create.add_argument('commonName', help='common name of certificate')
     #
     parser_create.set_defaults(func=do_create)
+
+    parser_revoke = subparsers.add_parser('revoke', help='revoke a certificate')
+    parser_revoke.add_argument('commonName', nargs='?', help='common name of certificate, otherwise stdin is used')
+    parser_revoke.set_defaults(func=do_revoke)
 
     args = parser.parse_args()
 
