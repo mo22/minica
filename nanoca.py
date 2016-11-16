@@ -172,7 +172,7 @@ class NanoCA:
     # --
 
     def validate_name(self, value):
-        if not re.match('^[a-zA-Z0-9\.\@]+$', value):
+        if not re.match('^[a-zA-Z0-9\-\.\@]+$', value):
             raise NanoCA.Error('invalid name: %r' % (value, ))
         return value
 
