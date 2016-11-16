@@ -20,8 +20,11 @@ class MiniCA:
         stdin_data=kwargs.pop('stdin_data', None)
         args = ['openssl'] + list(args)
         self.logger.debug('exec_openssl: %r', args)
+        if stdin_data:
+            self.logger.debug('exec_openssl: stdin_data=%r', stdin_data)
         proc = subprocess.Popen(
             args=args,
+            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env={
@@ -31,6 +34,7 @@ class MiniCA:
         )
         (stdout, stderr) = proc.communicate(stdin_data)
         proc.wait()
+        self.logger.debug('exec_openssl: exitcode=%r stdout=%r stderr=%r', proc.returncode, stdout, stderr)
         if proc.returncode != 0:
             raise MiniCA.Error("error calling openssl:\n" + stderr)
         return (proc.returncode, stdout, stderr)
@@ -63,7 +67,7 @@ class MiniCA:
     def initialize(self):
         if not os.path.isdir(self.get_path()):
             os.mkdir(self.get_path())
-        for i in ['certs', 'crl', 'newcerts', 'private']:
+        for i in ['certs', 'crl', 'newcerts', 'private', 'csr']:
             d = self.get_path(i)
             if not os.path.isdir(d):
                 os.mkdir(d)
@@ -84,8 +88,9 @@ class MiniCA:
             )
 
     def get_csr_info(self, csr):
+        print "X" * 80
         res = self.exec_openssl(
-            'req', '-text', '-noout', '-verify', '-in', '-',
+            'req', '-text', '-noout', '-verify',#, '-in', '-',
             stdin_data=csr
         )
         print res
@@ -112,7 +117,7 @@ class MiniCA:
             subj = {}
         subj['commonName'] = commonName
         self.exec_openssl(
-            'genrsa'
+            'genrsa',
             '-out', self.get_path('private', commonName+'.key.pem'),
             '2048'
         )
