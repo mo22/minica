@@ -6,8 +6,115 @@ import re
 import logging
 
 __all__ = ['NanoCA']
-__version__ = '0.1'
+__version__ = '0.6'
 __author = 'Moritz Moeller <mm@mxs.de>'
+
+openssl_cnf_template = """
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+dir               = $ENV::ROOT
+certs             = $dir/certs
+crl_dir           = $dir/crl
+new_certs_dir     = $dir/newcerts
+database          = $dir/index.txt
+serial            = $dir/serial
+RANDFILE          = $dir/private/.rnd
+private_key       = $dir/private/ca.key.pem
+certificate       = $dir/certs/ca.cert.pem
+crlnumber         = $dir/crlnumber
+crl               = $dir/crl/ca.crl.pem
+crl_extensions    = crl_ext
+default_crl_days  = 30
+default_md        = sha256
+name_opt          = ca_default
+cert_opt          = ca_default
+default_days      = 375
+preserve          = no
+policy            = policy_loose
+
+[ policy_strict ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ policy_loose ]
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+default_bits        = 2048
+distinguished_name  = req_distinguished_name
+string_mask         = utf8only
+default_md          = sha256
+x509_extensions     = v3_ca
+
+[ req_distinguished_name ]
+countryName                     = Country Name (2 letter code)
+stateOrProvinceName             = State or Province Name
+localityName                    = Locality Name
+0.organizationName              = Organization Name
+organizationalUnitName          = Organizational Unit Name
+commonName                      = Common Name
+emailAddress                    = Email Address
+#countryName_default             = GB
+#stateOrProvinceName_default     = England
+#localityName_default            =
+#0.organizationName_default      = Alice Ltd
+#organizationalUnitName_default =
+#emailAddress_default           =
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ v3_intermediate_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true, pathlen:0
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ usr_cert ]
+basicConstraints = CA:FALSE
+nsCertType = client, email
+nsComment = "OpenSSL Generated Client Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, emailProtection
+
+[ server_cert ]
+basicConstraints = CA:FALSE
+nsCertType = server
+nsComment = "OpenSSL Generated Server Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer:always
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+crlDistributionPoints = URI:http://example.com/intermediate.crl.pem
+
+
+[ crl_ext ]
+authorityKeyIdentifier=keyid:always
+
+[ ocsp ]
+basicConstraints = CA:FALSE
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, digitalSignature
+extendedKeyUsage = critical, OCSPSigning
+"""
 
 class NanoCA:
     """
@@ -47,7 +154,7 @@ class NanoCA:
             stderr=subprocess.PIPE,
             env={
                 'ROOT': self.get_path(),
-                'OPENSSL_CONF': os.path.abspath(os.path.join(os.path.dirname(__file__), 'openssl.cnf'))
+                'OPENSSL_CONF': self.get_path('openssl.cnf')
             }
         )
         (stdout, stderr) = proc.communicate(stdin_data)
@@ -117,6 +224,9 @@ class NanoCA:
 
         if not os.path.isdir(self.get_path()):
             os.mkdir(self.get_path())
+        if not os.path.isfile(self.get_path('openssl.cnf')):
+            with open(self.get_path('openssl.cnf'), 'w') as fp:
+                fp.write(openssl_cnf_template)
         for i in ['certs', 'crl', 'newcerts', 'private', 'all']:
             d = self.get_path(i)
             if not os.path.isdir(d):
@@ -325,7 +435,7 @@ def main():
     parser_key.add_argument('commonName', help='common name of certificate')
     parser_key.set_defaults(func=do_key)
 
-    parser_certkey = subparsers.add_parser('cert', help='write certificate and key to stdout in pem format')
+    parser_certkey = subparsers.add_parser('certkey', help='write certificate and key to stdout in pem format')
     parser_certkey.add_argument('commonName', help='common name of certificate')
     parser_certkey.set_defaults(func=do_certkey)
 
