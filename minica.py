@@ -137,7 +137,10 @@ class MiniCA:
                 pass
         if not os.path.isfile(self.get_path('serial')):
             with open(self.get_path('serial'), 'w') as fp:
-                fp.write('1000')
+                fp.write('1000\n')
+        if not os.path.isfile(self.get_path('crlnumber')):
+            with open(self.get_path('crlnumber'), 'w') as fp:
+                fp.write('1000\n')
         if not os.path.isfile(self.get_path('private', '.rand')):
             with open(self.get_path('private', '.rand'), 'w') as fp:
                 pass
@@ -208,6 +211,7 @@ class MiniCA:
             '-notext',
             '-md', 'sha256',
             '-batch',
+            '-in', '/dev/stdin',
             '-out', '/dev/stdout',
             stdin_data=csr
         )
@@ -215,6 +219,14 @@ class MiniCA:
             with open(self.get_path('all', info['commonName']+'.cert.pem'), 'w') as fp:
                 fp.write(res)
         return res
+
+    def get_crl(self):
+        return self.exec_openssl('ca', '-gencrl')
+
+    def revoke(self):
+        pass
+    # -gencrl
+
 
     def create_and_sign(self, commonName, subj=None, store=True):
         self.logger.info('create_and_sign commonName=%r subj=%r', commonName, subj)
@@ -232,10 +244,7 @@ class MiniCA:
         )
         csr = self.extract_csr(csr_and_key)
         key = self.extract_key(csr_and_key)
-        print 'CSR', csr
-        print 'KEY', key
         cert = self.sign(csr, store=store)
-        print "CERT", cert
         if store:
             with open(self.get_path('all', commonName+'.key.pem'), 'w') as fp:
                 fp.write(key)
@@ -279,6 +288,9 @@ if __name__ == '__main__':
     def do_cacert(args):
         sys.stdout.write(ca.get_ca_certificate())
 
+    def do_crl(args):
+        sys.stdout.write(ca.get_crl())
+
     def do_cert(args):
         sys.stdout.write(ca.get_certificate(args.commonName))
 
@@ -305,6 +317,9 @@ if __name__ == '__main__':
 
     parser_cacert = subparsers.add_parser('cacert', help='write ca cert to stdout in pem format')
     parser_cacert.set_defaults(func=do_cacert)
+
+    parser_crl = subparsers.add_parser('crl', help='write crl to stdout in pem format')
+    parser_crl.set_defaults(func=do_crl)
 
     parser_cert = subparsers.add_parser('cert', help='write certificate to stdout in pem format')
     parser_cert.add_argument('commonName', help='common name of certificate')
