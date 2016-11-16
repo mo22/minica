@@ -1,1 +1,5 @@
 /data
+/dist
+/MANIFEST
+/build
+/*.egg-info
