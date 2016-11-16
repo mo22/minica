@@ -3,12 +3,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name        = 'minica',
+    name        = 'nanoca',
     packages    = find_packages(),
-    scripts     = ['minica.py'],
+    scripts     = ['nanoca.py'],
     version     = '0.4',
-    description = 'minica - small library and cli tool for managing a certificate authority',
+    description = 'small library and cli tool for managing a certificate authority',
     author      = 'Moritz Möller',
     author_email= 'mm@mxs.de',
-    url         = 'https://github.com/mo22/minica'
+    url         = 'https://github.com/mo22/nanoca'
 )

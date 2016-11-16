@@ -1,31 +1,24 @@
 #!/usr/bin/env python
 
-"""
-[ ] docs
-[ ] github, pip
-http://stackoverflow.com/questions/5334531/using-javadoc-for-python-documentation
-https://jamielinux.com/docs/openssl-certificate-authority/
-"""
-
 import os
 import subprocess
 import re
 import logging
 
-__all__ = ['MiniCA']
+__all__ = ['NanoCA']
 __version__ = '0.1'
 __author = 'Moritz Moeller <mm@mxs.de>'
 
-class MiniCA:
+class NanoCA:
     """
-    MiniCA class
+    NanoCA class
     """
 
     class Error(Exception):
         def __init__(self, message):
             self.message = message
         def __str__(self):
-            return 'MiniCA.Error: ' + self.message
+            return 'NanoCA.Error: ' + self.message
 
     # --
 
@@ -61,7 +54,7 @@ class MiniCA:
         proc.wait()
         self.logger.debug('exec_openssl: exitcode=%r stdout=%r stderr=%r', proc.returncode, stdout, stderr)
         if proc.returncode != 0:
-            raise MiniCA.Error("error calling openssl:\n" + stderr)
+            raise NanoCA.Error("error calling openssl:\n" + stderr)
         return stdout
 
     # --
@@ -73,12 +66,12 @@ class MiniCA:
 
     def validate_name(self, value):
         if not re.match('^[a-zA-Z0-9\.\@]+$', value):
-            raise MiniCA.Error('invalid name: %r' % (value, ))
+            raise NanoCA.Error('invalid name: %r' % (value, ))
         return value
 
     def validate_string(self, value):
         if not re.match('^[^/]+$', value):
-            raise MiniCA.Error('invalid string: %r' % (value, ))
+            raise NanoCA.Error('invalid string: %r' % (value, ))
         return value
 
     # --
@@ -95,7 +88,7 @@ class MiniCA:
     def encode_subject(self, args):
         extra_fields = set(args.keys()) - set(self.subject_fields.values())
         if extra_fields:
-            raise MiniCA.Error('subject has extra field: %r' % (extra_fields, ))
+            raise NanoCA.Error('subject has extra field: %r' % (extra_fields, ))
         subj = ['']
         for (k, v) in self.subject_fields.items():
             if v in args:
@@ -110,7 +103,7 @@ class MiniCA:
                 continue
             k, v = i.replace('%2', '/').replace('%1', '%').split('=', 1)
             if k not in self.subject_fields:
-                raise MiniCA.Error('cannot decode field: %r' % (k, ))
+                raise NanoCA.Error('cannot decode field: %r' % (k, ))
             res[self.subject_fields[k]] = v
         return res
 
@@ -120,7 +113,7 @@ class MiniCA:
         try:
             self.exec_openssl('version')
         except:
-            raise MiniCA.Error('openssl binary not found')
+            raise NanoCA.Error('openssl binary not found')
 
         if not os.path.isdir(self.get_path()):
             os.mkdir(self.get_path())
@@ -168,7 +161,7 @@ class MiniCA:
         )
         m = re.search('subject=(.*)', res)
         if not m:
-            raise MiniCA.Error('cannot parse response')
+            raise NanoCA.Error('cannot parse response')
         return self.decode_subject(m.group(1))
 
     def extract_key(self, pem):
@@ -250,7 +243,7 @@ class MiniCA:
     def get_certificate(self, commonName):
         p = self.get_path('all', commonName + '.cert.pem')
         if not os.path.isfile(p):
-            raise MiniCA.Error('certificate for %r does not exist' % (commonName, ))
+            raise NanoCA.Error('certificate for %r does not exist' % (commonName, ))
         with open(p, 'r') as fp:
             return fp.read()
 
@@ -263,7 +256,7 @@ class MiniCA:
         """
         p = self.get_path('all', commonName + '.key.pem')
         if not os.path.isfile(p):
-            raise MiniCA.Error('key for %r does not exist' % (commonName, ))
+            raise NanoCA.Error('key for %r does not exist' % (commonName, ))
         with open(p, 'r') as fp:
             return fp.read()
 
@@ -313,7 +306,7 @@ if __name__ == '__main__':
             sys.stdout.write(ca.get_certificate(args.commonName))
             sys.stdout.write(ca.get_key(args.commonName))
 
-    parser = argparse.ArgumentParser(description='MiniCA')
+    parser = argparse.ArgumentParser(description='NanoCA')
     parser.add_argument('--root', help='root directory for CA')
     parser.add_argument('--verbose', action='store_true', default=False, help='verbose mode')
     subparsers = parser.add_subparsers(help='sub-command help')
@@ -361,11 +354,11 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.WARNING)
 
     root = os.path.abspath(os.path.join(__file__, '..', 'data'))
-    if 'MINICA_ROOT' in os.environ:
-        root = os.environ['MINICA_ROOT']
+    if 'NANOCA_ROOT' in os.environ:
+        root = os.environ['NANOCA_ROOT']
     if args.root:
         root = args.root
-    ca = MiniCA(
+    ca = NanoCA(
         root=root
     )
 
