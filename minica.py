@@ -1,11 +1,26 @@
 #!/usr/bin/env python
+
+"""
+[ ] docs: http://stackoverflow.com/questions/5334531/using-javadoc-for-python-documentation
+[ ] github
+[ ] cli
+
+"""
+
 import os
 import subprocess
 import re
 import logging
 
+__all__ = ['MiniCA']
+__version__ = '0.1'
+__author = 'Moritz Moeller <mm@mxs.de>'
 
 class MiniCA:
+    """
+    MiniCA class
+    """
+
     class Error(Exception):
         def __init__(self, message):
             self.message = message
@@ -13,8 +28,14 @@ class MiniCA:
             return 'MiniCA.Error: ' + self.message
 
     def __init__(self, root):
+        """
+        initialize the CA
+        :param root: base path for the CA
+        :type root: str or unicode
+        """
         self.root = root
         self.logger = logging.getLogger('%s(%s)' % (self.__class__.__name__, root))
+        self.initialize()
 
     def exec_openssl(self, *args, **kwargs):
         stdin_data=kwargs.pop('stdin_data', None)
@@ -37,7 +58,7 @@ class MiniCA:
         self.logger.debug('exec_openssl: exitcode=%r stdout=%r stderr=%r', proc.returncode, stdout, stderr)
         if proc.returncode != 0:
             raise MiniCA.Error("error calling openssl:\n" + stderr)
-        return (proc.returncode, stdout, stderr)
+        return stdout
 
     def get_path(self, *args):
         return os.path.join(self.root, *args)
@@ -52,19 +73,43 @@ class MiniCA:
             raise MiniCA.Error('invalid string: %r' % (value, ))
         return value
 
+    subject_fields = {
+        'C': 'country',
+        'ST': 'state',
+        'L': 'locality',
+        'O': 'organization',
+        'OU': 'organizationalUnit',
+        'CN': 'commonName'
+    }
+
     def encode_subject(self, args):
-        fields = [('C', 'country'), ('ST', 'state'), ('L', 'location'), ('O', 'organization'), ('OU', 'organizationalUnit'), ('CN', 'commonName')]
-        extra_fields = set(args.keys()) - set([v for (k, v) in fields])
+        extra_fields = set(args.keys()) - set(self.subject_fields.values())
         if extra_fields:
             raise MiniCA.Error('subject has extra field: %r' % (extra_fields, ))
         subj = ['']
-        for (k, v) in fields:
+        for (k, v) in self.subject_fields.items():
             if v in args:
                 subj.append(k+'='+args[v].encode('string-escape').replace('/', '\\/'))
         subj = '/'.join(subj)
         return subj
 
+    def decode_subject(self, arg):
+        res = {}
+        for i in arg.replace('%', '%1').replace('\\/', '%2').split('/'):
+            if i == '':
+                continue
+            k, v = i.replace('%2', '/').replace('%1', '%').split('=', 1)
+            if k not in self.subject_fields:
+                raise MiniCA.Error('cannot decode field: %r' % (k, ))
+            res[self.subject_fields[k]] = v
+        return res
+
     def initialize(self):
+        try:
+            self.exec_openssl('version')
+        except:
+            raise MiniCA.Error('openssl binary not found')
+
         if not os.path.isdir(self.get_path()):
             os.mkdir(self.get_path())
         for i in ['certs', 'crl', 'newcerts', 'private', 'csr']:
@@ -72,12 +117,14 @@ class MiniCA:
             if not os.path.isdir(d):
                 os.mkdir(d)
         os.chmod(self.get_path('private'), 0700)
+
         if not os.path.isfile(self.get_path('private', 'ca.key.pem')):
             self.exec_openssl(
                 'genrsa',
                 '-out', self.get_path('private', 'ca.key.pem'),
                 '4096'
             )
+
         if not os.path.isfile(self.get_path('certs', 'ca.cert.pem')):
             self.exec_openssl(
                 'req',
@@ -87,15 +134,13 @@ class MiniCA:
                 '-out', self.get_path('certs', 'ca.cert.pem')
             )
 
-    def get_csr_info(self, csr):
-        print "X" * 80
+    def get_csr_subject(self, csr):
         res = self.exec_openssl(
-            'req', '-text', '-noout', '-verify',#, '-in', '-',
-            stdin_data=csr
+            'req', '-subject', '-noout', '-verify', stdin_data=csr
         )
-        print res
-        pass
-
+        if not res.startswith('subject='):
+            raise MiniCA.Error('cannot parse response')
+        return self.decode_subject(res[len('subject='):].strip())
 
     def sign(self, csr):
         # max_days?
@@ -129,7 +174,8 @@ class MiniCA:
             '-out', self.get_path('csr', commonName+'.csr.pem')
         )
 
-        self.get_csr_info(self.get_csr(commonName))
+        tmp = self.get_csr_subject(self.get_csr(commonName))
+        print tmp
         # self.sign(self.get_csr(commonName))
         # -multivalue-rdn ?
         # -extensions?
@@ -145,6 +191,12 @@ class MiniCA:
             return fp.read()
 
     def get_key(self, commonName):
+        """
+        :param commonName: name of key to return
+        :type commonName: str
+        :returns: the key in PEM format
+        :rtype: str
+        """
         with open(self.get_path('private', commonName + '.key.pem'), 'r') as fp:
             return fp.read()
 
@@ -152,6 +204,10 @@ class MiniCA:
         return self.get_certificate(commonName) + self.get_key(commonName)
 
     def get_ca_certificate(self):
+        """
+        :returns: the CA certiciate in PEM format
+        :rtype: str
+        """
         with open(self.get_path('certs', 'ca.cert.pem'), 'r') as fp:
             return fp.read()
 
@@ -159,13 +215,20 @@ class MiniCA:
 
 
 if __name__ == '__main__':
+    import sys
+    import argparse
+    parser = argparse.ArgumentParser()
+    # parser.add_argument()
+
     logging.basicConfig(level=logging.DEBUG)
     ca = MiniCA(
         root=os.path.abspath(os.path.join(__file__, '..', 'data'))
         # location/etc. subj?
     )
-    ca.initialize() # auto!
-    ca.create_and_sign('client1.example.net')
+    ca.create_and_sign(
+        'client1.example.net',
+        subj={ 'organization': 'myorg' }
+    )
 
 
 
