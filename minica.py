@@ -244,7 +244,12 @@ if __name__ == '__main__':
         # location/etc. subj?
     )
 
-    print args
+    if args == ['cacert']:
+        sys.stdout.write(ca.get_ca_certificate())
+
+    elif args[0:1] == ['cert']:
+        sys.stdout.write(ca.get_certificate(args[1]))
+
     sys.exit(0)
 
     import argparse
