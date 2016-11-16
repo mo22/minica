@@ -2,12 +2,9 @@
 
 """
 [ ] docs
-[ ] github
-[ ] cli
-
+[ ] github, pip
 http://stackoverflow.com/questions/5334531/using-javadoc-for-python-documentation
 https://jamielinux.com/docs/openssl-certificate-authority/
-
 """
 
 import os
