@@ -300,7 +300,7 @@ if __name__ == '__main__':
     def do_sign(args):
         csr = sys.stdin.read()
         res = ca.sign(csr, days=args.days, extensions=[args.usage])
-        if args.print:
+        if args.show:
             sys.stdout.write(res)
 
     def do_revoke(args):
@@ -312,7 +312,7 @@ if __name__ == '__main__':
 
     def do_create(args):
         ca.create_and_sign(args.commonName, days=args.days, extensions=[args.usage])
-        if args.print:
+        if args.show:
             sys.stdout.write(ca.get_certificate(args.commonName))
             sys.stdout.write(ca.get_key(args.commonName))
 
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     parser_sign = subparsers.add_parser('sign', help='sign a csr')
     parser_sign.add_argument('--days', default='365', help='days of validity')
     parser_sign.add_argument('--usage', default='server_cert', help='usage, server_cert or usr_cert')
-    parser_sign.add_argument('--print', default=False, action='store_true', help='print result')
+    parser_sign.add_argument('--show', default=False, action='store_true', help='print result')
     parser_sign.set_defaults(func=do_sign)
 
     parser_revoke = subparsers.add_parser('revoke', help='revoke a certificate')
@@ -353,7 +353,7 @@ if __name__ == '__main__':
     parser_create.add_argument('commonName', help='common name of certificate')
     parser_create.add_argument('--days', default='365', help='days of validity')
     parser_create.add_argument('--usage', default='srv', help='usage, srv or usr')
-    parser_create.add_argument('--print', default=False, action='store_true', help='print result')
+    parser_create.add_argument('--show', default=False, action='store_true', help='print result')
     parser_create.set_defaults(func=do_create)
 
     args = parser.parse_args()
