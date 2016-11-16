@@ -39,7 +39,7 @@ class MiniCA:
         :type root: str or unicode
         """
         self.root = root
-        self.logger = logging.getLogger('%s(%s)' % (self.__class__.__name__, root))
+        self.logger = logging.getLogger('%s.%s' % (self.__class__.__name__, root))
         self.initialize()
 
     # --
@@ -127,7 +127,7 @@ class MiniCA:
 
         if not os.path.isdir(self.get_path()):
             os.mkdir(self.get_path())
-        for i in ['certs', 'crl', 'newcerts', 'private', 'csr']:
+        for i in ['certs', 'crl', 'newcerts', 'private', 'all']:
             d = self.get_path(i)
             if not os.path.isdir(d):
                 os.mkdir(d)
@@ -157,7 +157,13 @@ class MiniCA:
                 '-out', self.get_path('certs', 'ca.cert.pem')
             )
 
-    # --
+    def get_ca_certificate(self):
+        """
+        :returns: the CA certiciate in PEM format
+        :rtype: str
+        """
+        with open(self.get_path('certs', 'ca.cert.pem'), 'r') as fp:
+            return fp.read()
 
     def get_csr_info(self, csr):
         res = self.exec_openssl(
@@ -168,51 +174,69 @@ class MiniCA:
             raise MiniCA.Error('cannot parse response')
         return self.decode_subject(m.group(1))
 
-    def sign(self, csr):
+    def extract_key(self, pem):
+        return self.exec_openssl(
+            'rsa',
+            stdin_data=pem
+        )
+
+    def extract_cert(self, pem):
+        return self.exec_openssl(
+            'x509',
+            stdin_data=pem
+        )
+
+    def sign(self, csr, store=True):
+        """
+        sign csr (in pem format) and return certificate (in pem format)
+        """
+        self.logger.info('sign')
         info = self.get_csr_info(csr)
-        with open(self.get_path('csr', info['commonName']+'csr.pem'), 'w') as fp:
-            fp.write(csr)
+        self.logger.info('sign commonName=%r', info['commonName'])
         # max_days?
         # force_usage?
-        self.exec_openssl(
+        # '-extensions', 'usr_cert',
+        # '-days', '375',
+        res = self.exec_openssl(
             'ca',
-            '-extensions', 'usr_cert',
-            '-days', '375',
             '-notext',
             '-md', 'sha256',
             '-batch',
-            '-in', self.get_path('csr', info['commonName']+'.csr.pem'),
-            '-out', self.get_path('certs', info['commonName']+'.cert.pem'),
+            '-out', '/dev/stdout',
+            stdin_data=csr
         )
+        if store:
+            with open(self.get_path('all', info['commonName']+'.cert.pem'), 'w') as fp:
+                fp.write(res)
+        return res
 
-    def create_and_sign(self, commonName, subj=None):
+    def create_and_sign(self, commonName, subj=None, store=True):
+        self.logger.info('create_and_sign commonName=%r subj=%r', commonName, subj)
         self.validate_name(commonName)
         if subj is None:
             subj = {}
         subj['commonName'] = commonName
-        self.exec_openssl(
-            'genrsa',
-            '-out', self.get_path('private', commonName+'.key.pem'),
-            '2048'
-        )
-        self.exec_openssl(
+        csr_and_key = self.exec_openssl(
             'req',
             '-utf8', '-batch', '-new', '-sha256',
             '-subj', self.encode_subject(subj),
-            '-key', self.get_path('private', commonName+'.key.pem'),
-            '-out', self.get_path('csr', commonName+'.csr.pem')
+            '-days', '365',
+            '-extensions', 'usr_cert',
+            '-newkey', 'rsa:2048', '-nodes'
         )
-        self.sign(self.get_csr(commonName))
+        key = self.extract_key(csr_and_key)
+        cert = self.sign(csr_and_key)
+        if store:
+            with open(self.get_path('all', commonName+'.key.pem'), 'w') as fp:
+                fp.write(key)
+        print 'key', repr(key)
+        print 'cert', repr(cert)
+        return cert + key
 
-    def get_csr(self, commonName):
-        p = self.get_path('csr', commonName + '.csr.pem')
-        if not os.path.isfile(p):
-            raise MiniCA.Error('csr for %r does not exist' % (commonName, ))
-        with open(p, 'r') as fp:
-            return fp.read()
+    # --
 
     def get_certificate(self, commonName):
-        p = self.get_path('certs', commonName + '.cert.pem')
+        p = self.get_path('all', commonName + '.cert.pem')
         if not os.path.isfile(p):
             raise MiniCA.Error('certificate for %r does not exist' % (commonName, ))
         with open(p, 'r') as fp:
@@ -225,7 +249,7 @@ class MiniCA:
         :returns: the key in PEM format
         :rtype: str
         """
-        p = self.get_path('private', commonName + '.key.pem')
+        p = self.get_path('all', commonName + '.key.pem')
         if not os.path.isfile(p):
             raise MiniCA.Error('key for %r does not exist' % (commonName, ))
         with open(p, 'r') as fp:
@@ -233,14 +257,6 @@ class MiniCA:
 
     def get_key_and_certificate(self, commonName):
         return self.get_certificate(commonName) + self.get_key(commonName)
-
-    def get_ca_certificate(self):
-        """
-        :returns: the CA certiciate in PEM format
-        :rtype: str
-        """
-        with open(self.get_path('certs', 'ca.cert.pem'), 'r') as fp:
-            return fp.read()
 
 
 
@@ -299,9 +315,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     root = os.path.abspath(os.path.join(__file__, '..', 'data'))
     if 'MINICA_ROOT' in os.environ:
