@@ -33,6 +33,8 @@ cert_opt          = ca_default
 default_days      = 375
 preserve          = no
 policy            = policy_loose
+email_in_dn       = no
+unique_subject    = no
 
 [ policy_strict ]
 countryName             = match
@@ -103,7 +105,6 @@ authorityKeyIdentifier = keyid,issuer:always
 keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 crlDistributionPoints = URI:http://example.com/intermediate.crl.pem
-
 
 [ crl_ext ]
 authorityKeyIdentifier=keyid:always
@@ -234,6 +235,9 @@ class NanoCA:
         os.chmod(self.get_path('private'), 0700)
         if not os.path.isfile(self.get_path('index.txt')):
             with open(self.get_path('index.txt'), 'w') as fp:
+                pass
+        if not os.path.isfile(self.get_path('index.txt.attr')):
+            with open(self.get_path('index.txt.attr'), 'w') as fp:
                 pass
         if not os.path.isfile(self.get_path('serial')):
             with open(self.get_path('serial'), 'w') as fp:
