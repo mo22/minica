@@ -34,7 +34,6 @@ default_days      = 375
 preserve          = no
 policy            = policy_loose
 email_in_dn       = no
-unique_subject    = no
 
 [ policy_strict ]
 countryName             = match
@@ -87,7 +86,7 @@ authorityKeyIdentifier = keyid:always,issuer
 basicConstraints = critical, CA:true, pathlen:0
 keyUsage = critical, digitalSignature, cRLSign, keyCertSign
 
-[ usr_cert ]
+[ user_cert ]
 basicConstraints = CA:FALSE
 nsCertType = client, email
 nsComment = "OpenSSL Generated Client Certificate"
@@ -445,7 +444,7 @@ def main():
 
     parser_sign = subparsers.add_parser('sign', help='sign a csr')
     parser_sign.add_argument('--days', default='365', help='days of validity')
-    parser_sign.add_argument('--usage', default='server_cert', help='usage, server_cert or usr_cert')
+    parser_sign.add_argument('--usage', default='server_cert', help='usage, server_cert or user_cert')
     parser_sign.add_argument('--show', default=False, action='store_true', help='print result')
     parser_sign.set_defaults(func=do_sign)
 
@@ -456,7 +455,7 @@ def main():
     parser_create = subparsers.add_parser('create', help='create csr and sign')
     parser_create.add_argument('commonName', help='common name of certificate')
     parser_create.add_argument('--days', default='365', help='days of validity')
-    parser_create.add_argument('--usage', default='srv', help='usage, srv or usr')
+    parser_create.add_argument('--usage', default='server_cert', help='usage, server_cert or user_cert')
     parser_create.add_argument('--show', default=False, action='store_true', help='print result')
     parser_create.set_defaults(func=do_create)
 
