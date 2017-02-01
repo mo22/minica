@@ -1,10 +1,6 @@
 TODO:
-[ ] rename, pip
-    #python setup.py register -r pypi
-    #python setup.py sdist upload -r pypi
 [ ] this doc!
 [ ] inline docs
-
 http://stackoverflow.com/questions/5334531/using-javadoc-for-python-documentation
 https://jamielinux.com/docs/openssl-certificate-authority/
 
