@@ -10,6 +10,8 @@ __version__ = '0.8'
 __author = 'Moritz Moeller <mm@mxs.de>'
 
 openssl_cnf_template = """
+RANDFILE          = $ENV::ROOT/private/.rnd
+
 [ ca ]
 default_ca = CA_default
 
@@ -34,6 +36,7 @@ default_days      = 375
 preserve          = no
 policy            = policy_loose
 email_in_dn       = no
+copy_extensions   = copy
 
 [ policy_strict ]
 countryName             = match
