@@ -161,6 +161,7 @@ class NanoCA:
             }
         )
         (stdout, stderr) = proc.communicate(stdin_data)
+        stderr = stderr.decode('utf-8')
         proc.wait()
         self.logger.debug('exec_openssl: exitcode=%r stdout=%r stderr=%r', proc.returncode, stdout, stderr)
         if proc.returncode != 0:
@@ -234,7 +235,7 @@ class NanoCA:
             d = self.get_path(i)
             if not os.path.isdir(d):
                 os.mkdir(d)
-        os.chmod(self.get_path('private'), 0700)
+        os.chmod(self.get_path('private'), 0o700)
         if not os.path.isfile(self.get_path('index.txt')):
             with open(self.get_path('index.txt'), 'w') as fp:
                 pass
