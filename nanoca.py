@@ -203,7 +203,8 @@ class NanoCA:
         subj = ['']
         for (k, v) in self.subject_fields.items():
             if v in args:
-                subj.append(k+'='+args[v].encode('string-escape').replace('/', '\\/'))
+                #subj.append(k+'='+args[v].encode('string-escape').replace('/', '\\/'))
+                subj.append(k+'='+args[v]).replace('/', '\\/'))
         subj = '/'.join(subj)
         return subj
 
