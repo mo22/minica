@@ -146,6 +146,8 @@ class NanoCA:
 
     def exec_openssl(self, *args, **kwargs):
         stdin_data=kwargs.pop('stdin_data', None)
+        if stdin_data:
+            stdin_data = stdin_data.encode('ascii')
         args = ['openssl'] + list(args)
         self.logger.debug('exec_openssl: %r', args)
         if stdin_data:
@@ -162,6 +164,7 @@ class NanoCA:
         )
         (stdout, stderr) = proc.communicate(stdin_data)
         stderr = stderr.decode('utf-8')
+        stdout = stdout.decode('utf-8')
         proc.wait()
         self.logger.debug('exec_openssl: exitcode=%r stdout=%r stderr=%r', proc.returncode, stdout, stderr)
         if proc.returncode != 0:
@@ -204,7 +207,7 @@ class NanoCA:
         for (k, v) in self.subject_fields.items():
             if v in args:
                 #subj.append(k+'='+args[v].encode('string-escape').replace('/', '\\/'))
-                subj.append(k+'='+args[v]).replace('/', '\\/'))
+                subj.append(k+'='+args[v].replace('/', '\\/'))
         subj = '/'.join(subj)
         return subj
 
