@@ -438,7 +438,7 @@ def main():
     parser_cert.add_argument('commonName', help='common name of certificate')
     parser_cert.set_defaults(func=do_cert)
 
-    parser_key = subparsers.add_parser('cert', help='write key to stdout in pem format')
+    parser_key = subparsers.add_parser('key', help='write key to stdout in pem format')
     parser_key.add_argument('commonName', help='common name of certificate')
     parser_key.set_defaults(func=do_key)
 
