@@ -464,6 +464,9 @@ def main():
     parser_create.set_defaults(func=do_create)
 
     args = parser.parse_args()
+    if not hasattr(args, 'func'):
+        parser.print_help()
+        sys.exit(1)
 
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
