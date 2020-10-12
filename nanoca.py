@@ -217,6 +217,8 @@ class NanoCA:
             if i == '':
                 continue
             k, v = i.replace('%2', '/').replace('%1', '%').split('=', 1)
+            k = k.rstrip(' ')
+            v = v.lstrip(' ')
             if k not in self.subject_fields:
                 raise NanoCA.Error('cannot decode field: %r' % (k, ))
             res[self.subject_fields[k]] = v
@@ -240,6 +242,9 @@ class NanoCA:
             if not os.path.isdir(d):
                 os.mkdir(d)
         os.chmod(self.get_path('private'), 0o700)
+        if not os.path.isfile(self.get_path('private/.rnd')):
+            with open(self.get_path('private/.rnd'), 'w') as fp:
+                pass
         if not os.path.isfile(self.get_path('index.txt')):
             with open(self.get_path('index.txt'), 'w') as fp:
                 pass
