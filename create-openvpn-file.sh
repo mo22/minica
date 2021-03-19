@@ -2,7 +2,9 @@
 set -euo pipefail
 cd "$( dirname "$0" )"
 
-./nanoca create --days 3650 --usage user_cert "$1"
+if ! ./nanoca cert "$1" >/dev/null; then
+  ./nanoca create --days 3650 --usage user_cert "$1"
+fi
 
 echo "
 # created by $( realpath "$0" ) $1
@@ -38,5 +40,5 @@ $( ./nanoca cert "$1" )
 $( ./nanoca key "$1" )
 </key>
 
-" | tee "$1.ovpn"
+"
 
