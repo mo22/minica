@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+cd "$( dirname "$0" )"
 
 ./nanoca create --days 3650 --usage user_cert "$1"
 
